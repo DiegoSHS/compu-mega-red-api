@@ -95,5 +95,6 @@ UPDATE users SET role = 'admin' WHERE email = 'admin@ejemplo.com';
 ```
 
 Notas:
+- Para hacer las migraciones de prisma usar npx migrate dev y npx migrate deploy
 - Después de actualizar el rol a `admin`, ese usuario podrá realizar operaciones reservadas a administradores simplemente enviando su header `email` en las peticiones.
 - Internamente la persistencia (operaciones, declaraciones) sigue usando `user_id` como FK. El flujo de autorización y verificación se realiza por `email`.

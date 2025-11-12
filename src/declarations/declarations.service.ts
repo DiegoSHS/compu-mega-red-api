@@ -40,21 +40,67 @@ export class DeclarationsService extends DeclarationsDatasource {
   }
   /**
    * create
-   * Crea una nueva declaración en la base de datos.
-   * data: objeto Declaration con los campos necesarios (user_id, month, balances, etc.)
-   * Devuelve la declaración creada.
+   * Crea una nueva declaración en la base de datos. Los campos `sales_vat`,
+   * `purchases_vat` y `balance` se calculan a partir de las operaciones del
+   * mes/año y del usuario. Para calcular las sumas se utiliza `prisma.operations.aggregate`.
+   *
+   * Parámetros:
+   * - data: objeto Declaration parcial con al menos `month` y `user_id`.
+   * - year: año numérico usado para filtrar operaciones (opcional pero recomendado).
+   * - monthIndex: índice de mes (0-11) usado para filtrar operaciones (opcional pero recomendado).
    */
-  create(data: Declaration): Promise<Declaration> {
-    // Transformar campos que vienen desde DTO (números/strings) a los tipos que espera Prisma
+  async create(data: Declaration, year?: number, monthIndex?: number): Promise<Declaration> {
+    // Determinar rango de fechas para sumar las operaciones
+    let startDate: Date | undefined;
+    let endDate: Date | undefined;
+    if (year !== undefined && monthIndex !== undefined) {
+      startDate = new Date(year, monthIndex, 1);
+      endDate = new Date(year, monthIndex + 1, 0);
+    } else if (data.month) {
+      // Intentar extraer YYYY-MM si el campo month viene en ese formato
+      const match = /^(\d{4})-(\d{2})$/.exec((data.month as any) || '');
+      if (match) {
+        const y = Number(match[1]);
+        const m = Number(match[2]) - 1; // mes 0-11
+        startDate = new Date(y, m, 1);
+        endDate = new Date(y, m + 1, 0);
+      }
+    }
+
+    const Decimal = require('@prisma/client').Decimal;
+
+    // Sumar ventas (type: 'sale') y compras (type: 'purchase') para el usuario y rango
+    let salesSum: any = null;
+    let purchasesSum: any = null;
+    const commonWhere: any = {
+      user_id: (data as any).user_id ? (data as any).user_id : undefined,
+      date: startDate && endDate ? { gte: startDate, lte: endDate } : undefined,
+    };
+
+    salesSum = await this.prisma.operations.aggregate({
+      where: { ...commonWhere, type: 'sale' },
+      _sum: { amount: true },
+    });
+
+    purchasesSum = await this.prisma.operations.aggregate({
+      where: { ...commonWhere, type: 'purchase' },
+      _sum: { amount: true },
+    });
+
+    const salesAmount = salesSum && salesSum._sum && salesSum._sum.amount ? salesSum._sum.amount : new Decimal(0);
+    const purchasesAmount = purchasesSum && purchasesSum._sum && purchasesSum._sum.amount ? purchasesSum._sum.amount : new Decimal(0);
+    const balanceAmount = salesAmount.minus(purchasesAmount);
+
     const payload: any = {
       ...data,
-      sales_vat: (data as any).sales_vat !== undefined ? new (require('@prisma/client').Decimal)(Number((data as any).sales_vat)) : undefined,
-      purchases_vat: (data as any).purchases_vat !== undefined ? new (require('@prisma/client').Decimal)(Number((data as any).purchases_vat)) : undefined,
-      balance: (data as any).balance !== undefined ? new (require('@prisma/client').Decimal)(Number((data as any).balance)) : undefined,
-      creation_date: (data as any).creation_date ? new Date((data as any).creation_date) : undefined,
-      updated_date: (data as any).updated_date ? new Date((data as any).updated_date) : undefined,
+      sales_vat: salesAmount,
+      purchases_vat: purchasesAmount,
+      balance: balanceAmount,
+      creation_date: (data as any).creation_date ? new Date((data as any).creation_date) : new Date(),
+      updated_date: (data as any).updated_date ? new Date((data as any).updated_date) : new Date(),
     };
-    const newDeclaration = this.prisma.declarations.create({ data: payload });
+
+    const newDeclaration = await this.prisma.declarations.create({ data: payload });
     return newDeclaration;
   }
   /**

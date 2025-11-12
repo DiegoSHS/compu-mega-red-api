@@ -53,7 +53,8 @@ export class DeclarationsController {
       month: getMonthName(month),
       user_id: userId,
     }
-    return this.declarationsService.create(newDeclaration);
+    // Pasar year y month (índice 0-11) para que el servicio calcule los totales
+    return this.declarationsService.create(newDeclaration, year, month - 1);
   }
 
   @Put(':year/:month/status/:status')
