@@ -32,8 +32,8 @@ model Operations {
   declaration_id String? @db.Uuid
 
   // Relaciones
-  user Users @relation(fields: [user_id], references: [id])
-  declaration Declarations? @relation(fields: [declaration_id], references: [id], onDelete: SetNull)
+  user Users @relation(fields: [user_id], references: [id]) // Relacion obligatoria con Users one-to-many
+  declaration Declarations? @relation(fields: [declaration_id], references: [id], onDelete: SetNull) // Relacion opcional con Declarations zero-to-many
 }
 
 // Estado de la declaracion, usa un enum para definir los posibles estados
@@ -55,7 +55,7 @@ model Declarations {
   user_id String @db.Uuid
 
   // Relaciones
-  user Users @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user Users @relation(fields: [user_id], references: [id], onDelete: SetNull) // Relacion obligatoria con Users one-to-many
   operations Operations[]
   @@unique([user_id, month])
 }
