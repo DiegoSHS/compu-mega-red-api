@@ -4,6 +4,11 @@ import { UpdateOperationDto } from './dto/update-operation.dto';
 import { PrismaService } from 'src/prisma.service';
 import { OperationsDatasource } from './datasource/operationsDatasource';
 import { Operation } from './entities/operation.entity';
+/**
+ * OperationsService
+ * Se encarga de manejar las operaciones CRUD relacionadas con las operaciones financieras.
+ * Utiliza PrismaService para interactuar con la base de datos.
+ */
 @Injectable()
 export class OperationsService extends OperationsDatasource {
   constructor(
@@ -17,8 +22,8 @@ export class OperationsService extends OperationsDatasource {
     })
     return operation
   }
-  findOne(id: string): Promise<Operation[]> {
-    const operation = this.prisma.operations.findMany({
+  findOne(id: string): Promise<Operation> {
+    const operation = this.prisma.operations.findUnique({
       where: { id }
     })
     return operation

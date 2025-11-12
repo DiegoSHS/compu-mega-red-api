@@ -3,6 +3,11 @@ import { OperationsService } from './operations.service';
 import { CreateOperationDto } from './dto/create-operation.dto';
 import { UpdateOperationDto } from './dto/update-operation.dto';
 
+/**
+ * OperationsController
+ * Maneja las rutas relacionadas con las operaciones, se encarga de recibir las solicitudes HTTP
+ * y delega la lógica de negocio al OperationsService.
+ */
 @Controller('operations')
 export class OperationsController {
   constructor(private readonly operationsService: OperationsService) { }
