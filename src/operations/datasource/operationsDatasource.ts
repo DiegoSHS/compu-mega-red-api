@@ -1,4 +1,5 @@
 import { Operation } from "../entities/operation.entity";
+import { CreateOperationDto } from '../dto/create-operation.dto';
 
 /**
  * OperationsDatasource
@@ -10,7 +11,12 @@ export abstract class OperationsDatasource {
      * @param data Datos de la operación a crear
      * @returns La operación creada
      */
-    abstract create(data: Operation): Promise<Operation>;
+    /**
+     * Crea una nueva operación.
+     * El contrato usa CreateOperationDto para representar los datos recibidos desde
+     * la capa HTTP/servicio y permitir validaciones/transformaciones antes de persistir.
+     */
+    abstract create(data: CreateOperationDto): Promise<Operation>;
     /**
      * Busca una operación por su ID.
      * @param id uuid de la operacion a buscar
@@ -23,7 +29,11 @@ export abstract class OperationsDatasource {
      * @param data Datos parciales o completos de la operación a actualizar
      * @return La operación actualizada
      */
-    abstract updateOne(id: string, data: Partial<Operation>): Promise<Operation>;
+    /**
+     * Actualiza una operación existente. El parámetro `data` es un partial del DTO
+     * para facilitar la validación y transformación de campos entrantes.
+     */
+    abstract updateOne(id: string, data: Partial<CreateOperationDto>): Promise<Operation>;
     /**
      * Elimina una operación por su ID.
      * @param id uuid de la operación a eliminar

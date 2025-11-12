@@ -26,7 +26,7 @@ export class DeclarationsService extends DeclarationsDatasource {
    * - userId: id del usuario propietario de la declaración
    * Devuelve la primera declaración que coincida con el rango de fechas y el usuario.
    */
-  find(year: number, month: number, userId: string): Promise<Declaration> {
+  find(year: number, month: number, userId: string): Promise<Declaration | null> {
     const declaration = this.prisma.declarations.findFirst({
       where: {
         creation_date: {
@@ -45,9 +45,16 @@ export class DeclarationsService extends DeclarationsDatasource {
    * Devuelve la declaración creada.
    */
   create(data: Declaration): Promise<Declaration> {
-    const newDeclaration = this.prisma.declarations.create({
-      data,
-    });
+    // Transformar campos que vienen desde DTO (números/strings) a los tipos que espera Prisma
+    const payload: any = {
+      ...data,
+      sales_vat: (data as any).sales_vat !== undefined ? new (require('@prisma/client').Decimal)(Number((data as any).sales_vat)) : undefined,
+      purchases_vat: (data as any).purchases_vat !== undefined ? new (require('@prisma/client').Decimal)(Number((data as any).purchases_vat)) : undefined,
+      balance: (data as any).balance !== undefined ? new (require('@prisma/client').Decimal)(Number((data as any).balance)) : undefined,
+      creation_date: (data as any).creation_date ? new Date((data as any).creation_date) : undefined,
+      updated_date: (data as any).updated_date ? new Date((data as any).updated_date) : undefined,
+    };
+    const newDeclaration = this.prisma.declarations.create({ data: payload });
     return newDeclaration;
   }
   /**
@@ -59,19 +66,22 @@ export class DeclarationsService extends DeclarationsDatasource {
    * - year, month: rango temporal
    * - declaration: objeto con el nuevo estado (p.ej. { status: 'submitted' })
    */
-  update(year: number, month: number, declaration: Declaration): Promise<Declaration> {
-    const updatedDeclaration = this.prisma.declarations.updateMany({
+  async update(year: number, month: number, declaration: Declaration): Promise<Declaration | null> {
+    // Buscar la declaración existente y actualizarla por id para devolver la entidad
+    const found = await this.prisma.declarations.findFirst({
       where: {
         creation_date: {
           gte: new Date(year, month, 1),
           lte: new Date(year, month + 1, 0),
         }
-      },
-      data: {
-        status: declaration.status,
       }
-    })
-    return updatedDeclaration[0];
+    });
+    if (!found) return null;
+    const updated = await this.prisma.declarations.update({
+      where: { id: found.id },
+      data: { status: declaration.status },
+    });
+    return updated;
   }
   /**
    * getStatus
@@ -98,15 +108,18 @@ export class DeclarationsService extends DeclarationsDatasource {
    * Devuelve la(s) declaración(es) eliminada(s). Usamos deleteMany para abarcar
    * el rango de fechas compatibles con la búsqueda por mes.
    */
-  delete(year: number, month: number): Promise<Declaration> {
-    const deletedDeclaration = this.prisma.declarations.deleteMany({
+  delete(year: number, month: number): Promise<Declaration | null> {
+    // Buscar la declaración y eliminar por id para devolver la entidad eliminada
+    return this.prisma.declarations.findFirst({
       where: {
         creation_date: {
           gte: new Date(year, month, 1),
           lte: new Date(year, month + 1, 0),
         }
-      },
-    })
-    return deletedDeclaration[0];
+      }
+    }).then(async (found) => {
+      if (!found) return null;
+      return this.prisma.declarations.delete({ where: { id: found.id } });
+    });
   }
 }
