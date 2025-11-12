@@ -71,3 +71,30 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](LICENSE).
+
+## Documentación del sistema de autenticación (header `email`)
+
+Este proyecto implementa un método de identificación basado en el header HTTP `email`.
+
+- Para acceder a rutas protegidas no es necesario realizar un login ni enviar JWT.
+- Basta con incluir el header `email: usuario@ejemplo.com` en la petición.
+
+Comportamiento clave:
+- Si la ruta está marcada con `@Public()` no se requiere autenticación.
+- Las autorizaciones por rol (decorador `@Roles(...)`) usan el `email` para verificar la identidad y el rol.
+
+Administración de usuarios admin
+--------------------------------
+Los usuarios con rol `admin` deben crearse directamente en la base de datos. Flujo recomendado:
+
+1. Crear un usuario normal mediante la API pública (POST /users).
+2. En la base de datos, actualizar el campo `role` del usuario a `admin`.
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'admin@ejemplo.com';
+```
+
+Notas:
+- Para hacer las migraciones de prisma usar npx prisma migrate dev y npx prisma migrate deploy
+- Después de actualizar el rol a `admin`, ese usuario podrá realizar operaciones reservadas a administradores simplemente enviando su header `email` en las peticiones.
+- Internamente la persistencia (operaciones, declaraciones) sigue usando `user_id` como FK. El flujo de autorización y verificación se realiza por `email`.

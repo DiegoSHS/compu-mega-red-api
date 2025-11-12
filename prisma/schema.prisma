@@ -55,7 +55,7 @@ model Declarations {
   user_id       String            @db.Uuid
 
   // Relaciones
-  user       Users        @relation(fields: [user_id], references: [id], onDelete: SetNull) // Relacion obligatoria con Users one-to-many
+  user       Users        @relation(fields: [user_id], references: [id], onDelete: Cascade) // Relacion obligatoria con Users one-to-many
   operations Operations[]
 
   @@unique([user_id, month])
